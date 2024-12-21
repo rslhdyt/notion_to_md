@@ -66,10 +66,24 @@ module NotionToMd
 
         def image(block)
           type = block[:type].to_sym
-          url = block.dig(type, :url)
-          caption = convert_caption(block)
+          url = URI.parse(block.dig(type, :url))
+          
+          image_md = "![](#{url})" 
 
-          "![](#{url})\n\n#{caption}"
+          if type == :file
+            filename = url.path.split('/')[-2..-1].join('-')
+            filename_path = "assets/images/posts/#{filename}"
+            
+            # download the image if it doesn't exist
+            IO.copy_stream(url.open, filename_path) unless File.exist?(filename_path)
+
+            image_md = "![](/#{filename_path})"
+          end
+
+          caption = convert_caption(block)
+          image_md += "\n<em>#{caption}</em>" unless caption.empty?
+
+          return image_md
         end
 
         def bookmark(block)
@@ -92,7 +106,7 @@ module NotionToMd
         def link_preview(block)
           url = block[:url]
 
-          "[#{url}](#{url})"
+          "[#{url}](#{url})\n"
         end
 
         private
